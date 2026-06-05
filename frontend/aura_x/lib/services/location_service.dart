@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
@@ -12,12 +13,20 @@ class LocationService {
   LocationService._internal();
 
   Stream<Position>? _positionStream;
+  StreamSubscription<Position>? _positionSubscription;
   Position? _currentPosition;
   final WebSocketService _wsService = WebSocketService();
   final http.Client _client = http.Client();
   String? _userId;
+  final StreamController<Position> _locationController =
+      StreamController<Position>.broadcast();
 
   Position? get currentPosition => _currentPosition;
+  Stream<Position> get positionStream => _locationController.stream;
+
+  void _log(String message) {
+    debugPrint('LocationService: $message');
+  }
 
   Future<bool> initializeLocation() async {
     try {
@@ -44,12 +53,20 @@ class LocationService {
 
       return true;
     } catch (e) {
+      _log('Initialize failed: $e');
       return false;
     }
   }
 
-  Stream<Position> startLocationStream({String? userId}) {
+  void startLocationStream({String? userId}) {
     _userId = userId;
+    _log('Starting location stream for user: $userId');
+
+    if (_positionSubscription != null) {
+      _log('Location stream already active');
+      return;
+    }
+
     const LocationSettings locationSettings = LocationSettings(
       accuracy: LocationAccuracy.bestForNavigation,
       distanceFilter: 5,
@@ -59,13 +76,18 @@ class LocationService {
       locationSettings: locationSettings,
     );
 
-    // Send location updates to backend
-    _positionStream!.listen((position) {
-      _currentPosition = position;
-      _sendLocationToBackend(position);
-    });
-
-    return _positionStream!;
+    // Subscribe to position stream (only once)
+    _positionSubscription = _positionStream!.listen(
+      (position) {
+        _currentPosition = position;
+        _log('Location received ${position.latitude}, ${position.longitude}');
+        _locationController.add(position);
+        _sendLocationToBackend(position);
+      },
+      onError: (error) {
+        _log('Location stream error: $error');
+      },
+    );
   }
 
   Future<void> _sendLocationToBackend(Position position) async {
@@ -73,28 +95,40 @@ class LocationService {
 
     try {
       // Send via REST API
-      await _client.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.liveLocation}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': _userId,
-          'location': {
-            'lat': position.latitude,
-            'lng': position.longitude,
-          },
-          'speed': position.speed,
-          'heading': position.heading,
-        }),
-      );
+      final response = await _client
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}${ApiConfig.liveLocation}'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'user_id': _userId,
+              'location': {
+                'lat': position.latitude,
+                'lng': position.longitude,
+              },
+              'speed': position.speed,
+              'heading': position.heading,
+            }),
+          )
+          .timeout(ApiConfig.connectionTimeout);
 
-      // Send via WebSocket for real-time updates
+      if (response.statusCode == 200) {
+        _log('Location sent to backend');
+      } else {
+        _log('Backend returned ${response.statusCode}');
+      }
+    } catch (e) {
+      _log('Error sending location: $e');
+    }
+
+    // Always attempt WebSocket send regardless of REST API result
+    try {
       _wsService.sendLocationUpdate(
         {'lat': position.latitude, 'lng': position.longitude},
         speed: position.speed,
         heading: position.heading,
       );
     } catch (e) {
-      // Handle error silently to avoid interrupting location stream
+      _log('WebSocket send failed: $e');
     }
   }
 
@@ -114,8 +148,11 @@ class LocationService {
   }
 
   void dispose() {
+    _positionSubscription?.cancel();
     _positionStream = null;
     _currentPosition = null;
+    _locationController.close();
     _client.close();
+    _log('LocationService disposed');
   }
 }

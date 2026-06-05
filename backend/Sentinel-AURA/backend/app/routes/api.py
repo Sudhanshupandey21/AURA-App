@@ -84,15 +84,24 @@ async def predict_risk(request: RiskPredictionRequest, db=Depends(get_database))
 
 @router.post("/route-analysis", response_model=RouteAnalysisResponse)
 async def analyze_route(request: RouteAnalysisRequest, db=Depends(get_database)):
-    """Analyze route safety using AI engines"""
+    """Analyze route safety using AI engines - fetch route and analyze"""
     try:
-        result = await ai_service.analyze_route(request.user_id, request.route_points, request.preferences)
+        result = await ai_service.analyze_route(
+            request.user_id,
+            request.source_lat,
+            request.source_lng,
+            request.dest_lat,
+            request.dest_lng,
+            request.preferences
+        )
 
         response = RouteAnalysisResponse(
             success=True,
-            safest_route=result.get("safest_route", request.route_points),
-            risk_assessment=result.get("risk_assessment", {}),
-            alternatives=result.get("alternatives", [])
+            safe_route=result.get("safe_route", []),
+            risk_score=result.get("risk_score", 0.0),
+            warnings=result.get("warnings", []),
+            estimated_time=result.get("estimated_time", "Unknown"),
+            distance=result.get("distance", "Unknown")
         )
         return response
     except Exception as e:

@@ -40,9 +40,9 @@ class RealtimeManager {
     switch (type) {
       case 'risk_update':
         // Update risk data in provider
-        wsProvider._handleMessage(message);
+        wsProvider.handleMessage(message);
         break;
-cd 
+
       case 'emergency_alert':
         // Handle emergency alerts
         _handleEmergencyAlert(message);
@@ -56,6 +56,9 @@ cd
 
   void _handleEmergencyAlert(Map<String, dynamic> message) {
     final alertData = message['data'];
+    if (alertData == null) {
+      return;
+    }
     // Show emergency notification or alert
     // This could trigger UI updates or notifications
   }

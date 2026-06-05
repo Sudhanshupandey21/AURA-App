@@ -10,6 +10,7 @@ class WebSocketProvider with ChangeNotifier {
 
   bool get isConnected => _isConnected;
   RiskData? get latestRiskUpdate => _latestRiskUpdate;
+  String? get userId => _userId;
 
   Future<void> connect(String userId) async {
     _userId = userId;
@@ -19,11 +20,11 @@ class WebSocketProvider with ChangeNotifier {
 
     // Listen for messages
     _wsService.messages.listen((message) {
-      _handleMessage(message);
+      handleMessage(message);
     });
   }
 
-  void _handleMessage(Map<String, dynamic> message) {
+  void handleMessage(Map<String, dynamic> message) {
     final type = message['type'];
 
     switch (type) {

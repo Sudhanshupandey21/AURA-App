@@ -1,6 +1,26 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
-  static const String baseUrl = "http://10.0.2.2:8000";
-  static const String wsUrl = "ws://10.0.2.2:8000/ws/live-tracking";
+  // Platform-aware base URL
+  static String get baseUrl {
+    if (kIsWeb) {
+      // Web platform: use localhost
+      return 'http://localhost:8000';
+    } else {
+      // Android emulator: use 10.0.2.2
+      // Physical device: configure via environment or settings
+      return 'http://10.0.2.2:8000';
+    }
+  }
+
+  // Platform-aware WebSocket URL
+  static String get wsUrl {
+    if (kIsWeb) {
+      return 'ws://localhost:8000/ws/live-tracking';
+    } else {
+      return 'ws://10.0.2.2:8000/ws/live-tracking';
+    }
+  }
 
   // API Endpoints
   static const String health = "/api/health";
@@ -17,4 +37,7 @@ class ApiConfig {
   // Timeout configurations
   static const Duration connectionTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 30);
+
+  // Demo mode flag (enable when backend is unavailable)
+  static const bool useDemoMode = false;
 }

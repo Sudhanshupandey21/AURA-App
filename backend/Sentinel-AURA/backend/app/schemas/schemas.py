@@ -15,14 +15,19 @@ class RiskPredictionResponse(BaseModel):
 
 class RouteAnalysisRequest(BaseModel):
     user_id: str
-    route_points: list[Dict[str, float]]  # List of {"lat": float, "lng": float}
+    source_lat: float
+    source_lng: float
+    dest_lat: float
+    dest_lng: float
     preferences: Optional[Dict[str, Any]] = None
 
 class RouteAnalysisResponse(BaseModel):
     success: bool
-    safest_route: list[Dict[str, float]]
-    risk_assessment: Dict[str, Any]
-    alternatives: Optional[list] = None
+    safe_route: list[Dict[str, float]]
+    risk_score: float
+    warnings: Optional[list] = []
+    estimated_time: str
+    distance: str
 
 class IncidentReportRequest(BaseModel):
     user_id: str

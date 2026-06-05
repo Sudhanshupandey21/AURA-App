@@ -20,6 +20,9 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
+    # OpenRouteService API key (get from https://openrouteservice.org/)
+    ors_api_key: str = ""
+
     model_config = {"env_file": ".env"}
 
 settings = Settings()

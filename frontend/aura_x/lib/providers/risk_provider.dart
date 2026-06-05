@@ -36,13 +36,19 @@ class RiskProvider with ChangeNotifier {
 
   Future<RouteAnalysis?> analyzeRoute({
     required String userId,
-    required List<Map<String, double>> routePoints,
+    required double sourceLat,
+    required double sourceLng,
+    required double destLat,
+    required double destLng,
     Map<String, dynamic>? preferences,
   }) async {
     try {
       final response = await _riskService.analyzeRoute(
         userId: userId,
-        routePoints: routePoints,
+        sourceLat: sourceLat,
+        sourceLng: sourceLng,
+        destLat: destLat,
+        destLng: destLng,
         preferences: preferences,
       );
 

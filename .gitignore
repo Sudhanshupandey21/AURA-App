@@ -1,0 +1,13 @@
+node_modules/
+.venv/
+venv/
+__pycache__/
+dist/
+build/
+.cache/
+*.log
+*.pyc
+.env
+android/.gradle/
+android/app/build/
+ios/Pods/

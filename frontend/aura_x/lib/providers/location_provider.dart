@@ -23,8 +23,8 @@ class LocationProvider with ChangeNotifier {
   void startTracking({String? userId}) {
     if (_isTracking) return;
 
-    _positionStream = _locationService.startLocationStream(userId: userId);
-    _positionStream!.listen((position) {
+    _positionStream = _locationService.positionStream;
+    _positionStream?.listen((position) {
       _currentPosition = position;
       notifyListeners();
     });

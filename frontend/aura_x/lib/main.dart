@@ -5,6 +5,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
+import '/core/providers/navigation_provider.dart';
+import 'voice_assistant_service.dart';
+import 'ai_assistant_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,8 +63,12 @@ class MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _appStateNotifier,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _appStateNotifier),
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
+        ChangeNotifierProvider(create: (_) => VoiceAssistantService()),
+      ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: 'AURA X',
@@ -81,6 +88,14 @@ class MyAppState extends State<MyApp> {
         ),
         themeMode: _themeMode,
         routerConfig: _router,
+        builder: (context, child) {
+          return Stack(
+            children: [
+              if (child != null) child,
+              const AiAssistantOverlay(),
+            ],
+          );
+        },
       ),
     );
   }

@@ -10,9 +10,11 @@ import 'dart:async';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/core/services/websocket_service.dart';
+import '/core/providers/navigation_provider.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
 import 'home_map_model.dart';
 export 'home_map_model.dart';
 
@@ -31,6 +33,11 @@ class _HomeMapWidgetState extends State<HomeMapWidget> {
   final WebSocketService _wsService = WebSocketService();
   StreamSubscription<Map<String, dynamic>>? _wsSubscription;
   late HomeMapModel _model;
+  late NavigationProvider _navigationProvider;
+
+  // Destination input
+  final TextEditingController _destinationController = TextEditingController();
+  bool _showDestinationInput = false;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -42,9 +49,16 @@ class _HomeMapWidgetState extends State<HomeMapWidget> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _navigationProvider = Provider.of<NavigationProvider>(context);
+  }
+
+  @override
   void dispose() {
     _wsSubscription?.cancel();
     _wsService.disconnect();
+    _destinationController.dispose();
     _model.dispose();
 
     super.dispose();
@@ -65,6 +79,65 @@ class _HomeMapWidgetState extends State<HomeMapWidget> {
         ),
       );
     });
+  }
+
+  Future<void> _startSafeRoute() async {
+    final destinationText = _destinationController.text.trim();
+    if (destinationText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a destination'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // For now, use a simple coordinate parsing or geocoding
+    // TODO: Implement proper geocoding
+    // For demo, assume format: "lat,lng" or search for address
+    double? destLat, destLng;
+
+    if (destinationText.contains(',')) {
+      final parts = destinationText.split(',');
+      destLat = double.tryParse(parts[0].trim());
+      destLng = double.tryParse(parts[1].trim());
+    }
+
+    if (destLat == null || destLng == null) {
+      // TODO: Implement geocoding service
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Please enter coordinates as "lat,lng" (e.g., "21.2514,81.6296")'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    final success = await _navigationProvider.startNavigation(
+      destLat: destLat,
+      destLng: destLng,
+      destinationAddress: destinationText,
+    );
+
+    if (success) {
+      setState(() {
+        _showDestinationInput = false;
+        _destinationController.clear();
+      });
+
+      // Navigate to route comparison page
+      context.goNamed(RouteComparisonWidget.routeName);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to start navigation. Please try again.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override
@@ -199,6 +272,119 @@ class _HomeMapWidgetState extends State<HomeMapWidget> {
                               child: () => const HudCardChild2Widget(),
                             ),
                           ),
+
+                          // Destination Input Section
+                          if (_showDestinationInput) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 16.0),
+                              child: HudCardWidget(
+                                margin: 16.0,
+                                padding: 'sm',
+                                child: () => Column(
+                                  children: [
+                                    TextField(
+                                      controller: _destinationController,
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            font: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter destination...',
+                                        hintStyle: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              font: const TextStyle(
+                                                fontFamily: 'Inter',
+                                                color: Colors.white70,
+                                              ),
+                                            ),
+                                        filled: true,
+                                        fillColor:
+                                            Colors.black.withValues(alpha: 0.3),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                          borderSide: const BorderSide(
+                                            color: Colors.cyanAccent,
+                                            width: 1.0,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                          borderSide: const BorderSide(
+                                            color: Colors.cyanAccent,
+                                            width: 1.0,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                          borderSide: const BorderSide(
+                                            color: Colors.cyanAccent,
+                                            width: 2.0,
+                                          ),
+                                        ),
+                                        suffixIcon: IconButton(
+                                          icon: const Icon(
+                                            Icons.search,
+                                            color: Colors.cyanAccent,
+                                          ),
+                                          onPressed: () {
+                                            // TODO: Implement destination search
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12.0),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: _startSafeRoute,
+                                            icon: const Icon(Icons.navigation,
+                                                size: 16),
+                                            label:
+                                                const Text('Start Safe Route'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Colors.cyanAccent,
+                                              foregroundColor: Colors.black,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 12),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        TextButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _showDestinationInput = false;
+                                              _destinationController.clear();
+                                            });
+                                          },
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.redAccent,
+                                          ),
+                                          child: const Text('Cancel'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+
                           Row(
                             mainAxisSize: MainAxisSize.max,
                             mainAxisAlignment: MainAxisAlignment.start,
@@ -212,14 +398,18 @@ class _HomeMapWidgetState extends State<HomeMapWidget> {
                                   hoverColor: Colors.transparent,
                                   highlightColor: Colors.transparent,
                                   onTap: () async {
-                                    context.goNamed(
-                                        RouteComparisonWidget.routeName);
+                                    setState(() {
+                                      _showDestinationInput =
+                                          !_showDestinationInput;
+                                    });
                                   },
                                   child: wrapWithModel(
                                     model: _model.buttonModel,
                                     updateCallback: () => safeSetState(() {}),
                                     child: ButtonWidget(
-                                      content: 'START SAFE ROUTE',
+                                      content: _showDestinationInput
+                                          ? 'HIDE DESTINATION'
+                                          : 'START SAFE ROUTE',
                                       icon: Icon(
                                         Icons.navigation_rounded,
                                         color: FlutterFlowTheme.of(context)

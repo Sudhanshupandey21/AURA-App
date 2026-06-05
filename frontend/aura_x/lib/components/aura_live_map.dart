@@ -23,6 +23,8 @@ class AuraLiveMap extends StatefulWidget {
     this.userId,
     this.extraMarkers = const [],
     this.routes = const [],
+    this.routePoints = const [],
+    this.destination,
   });
 
   static const LatLng fallbackCenter = LatLng(21.2514, 81.6296);
@@ -39,6 +41,8 @@ class AuraLiveMap extends StatefulWidget {
   final String? userId;
   final List<Marker> extraMarkers;
   final List<Polyline> routes;
+  final List<LatLng> routePoints;
+  final LatLng? destination;
 
   @override
   State<AuraLiveMap> createState() => _AuraLiveMapState();
@@ -111,8 +115,7 @@ class _AuraLiveMapState extends State<AuraLiveMap> {
     }
 
     _positionSubscription?.cancel();
-    _positionSubscription =
-        _locationService.startLocationStream(userId: widget.userId).listen(
+    _positionSubscription = _locationService.positionStream.listen(
       (position) {
         debugPrint(
           'AURA MAP: location received ${position.latitude}, ${position.longitude}',
@@ -268,9 +271,51 @@ class _AuraLiveMapState extends State<AuraLiveMap> {
                 ),
                 if (widget.routes.isNotEmpty)
                   PolylineLayer(polylines: widget.routes),
+                if (widget.routePoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: widget.routePoints,
+                        color: Colors.cyanAccent,
+                        strokeWidth: 4.0,
+                        borderColor: Colors.black,
+                        borderStrokeWidth: 2.0,
+                      ),
+                    ],
+                  ),
                 ...userLayers,
                 if (widget.extraMarkers.isNotEmpty)
                   MarkerLayer(markers: widget.extraMarkers),
+                if (widget.destination != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: widget.destination!,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.8),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2.0,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.redAccent.withValues(alpha: 0.5),
+                                blurRadius: 8.0,
+                                spreadRadius: 2.0,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.white,
+                            size: 24.0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
             const IgnorePointer(child: _CyberpunkMapTint()),
